@@ -28,8 +28,6 @@ C18	c	-78.12187449	37.47114968
 C19	c	-76.27793423	36.03240452
 C20	c	-78.15246267	37.06416891
 
-
-
 Q Vehicle fuel tank capacity /60/
 r fuel consumption rate /0.2/
 TL TourLength /14/
