@@ -15,7 +15,7 @@ using namespace std;
 #define _USE_MATH_DEFINES
 
 
-struct Instancia
+struct Nodos
 {  
     string id;  
     string type;  
@@ -67,9 +67,9 @@ void splitLinea(string s, string (&r)[4]) {
 //--- como parametro en la ejecucion del programa, un vector -------//
 //--- inicializado vacio y un arreglo estatico de parametros -------//
 //------------------------------------------------------------------//
-//--- CAMBIA el valor del vector rellenandolo con instancias -------//
+//--- CAMBIA el valor del vector rellenandolo con nodos ------------//
 //------------------------------------------------------------------//
-void Read(int argc, char **argv, vector<Instancia> &inst, float *Params) {
+void Read(int argc, char **argv, vector<Nodos> &node, float *Params) {
 
     // Abre el archivo especificado
     fstream myfile;
@@ -97,7 +97,7 @@ void Read(int argc, char **argv, vector<Instancia> &inst, float *Params) {
             }               
 
             if (notvacio){
-                // Lee primeras lineas con instancias
+                // Lee primeras lineas con nodos
                 string arr[4];
 
                 // Separa la linea y guarda en arreglo
@@ -107,7 +107,7 @@ void Read(int argc, char **argv, vector<Instancia> &inst, float *Params) {
                 {     
                     
                     // Guarda elemento en estructura: id, type, Longitude, Latitude
-                    inst.push_back(Instancia{arr[0], arr[1], stod(arr[2]), stod(arr[3])});
+                    node.push_back(Nodos{arr[0], arr[1], stod(arr[2]), stod(arr[3])});
                 }                        
             } 
             
@@ -153,7 +153,7 @@ void Read(int argc, char **argv, vector<Instancia> &inst, float *Params) {
 //------------------------------------------------------------------//
 //--- DEVUELVE: la distancia de harvesine entre ambos --------------//
 //------------------------------------------------------------------//
-double Harvesine(Instancia p1, Instancia p2){
+double Harvesine(Nodos p1, Nodos p2){
     const static double radiusOfEarth = 4182.44949; // miles, 6371km (más exacto con millas)
     
     // Convertir coordenadas a radianes
@@ -180,19 +180,19 @@ double Harvesine(Instancia p1, Instancia p2){
 //------------------------------------------------------------------//
 //-- FUNCION: Obtener nodo mas cercano -----------------------------//
 //------------------------------------------------------------------//
-//-- RECIBE: las distancias, las instancias y el i-esimo nodo ------//
+//-- RECIBE: las distancias, los nodos y el i-esimo nodo -----------//
 //------------------------------------------------------------------//
-//-- DEVUELVE: los indices del node mas cercano al que se pide -----//
+//-- DEVUELVE: los indices del nodo mas cercano al que se pide -----//
 //------------------------------------------------------------------//
-int min_dist_to_node(vector<Instancia> inst, int i, vector<int> &out){
+int min_dist_to_node(vector<Nodos> node, int i, vector<int> &out){
 	double min = 32767;
 	int index;
     double dist;     
 				
-	for (int j = 0; j < inst.size(); j++)
+	for (int j = 0; j < node.size(); j++)
     {
-        if ((inst[i]).id != (inst[j]).id && find(out.begin(), out.end(), j) == out.end()){
-            dist = Harvesine(inst[i], inst[j]);            
+        if ((node[i]).id != (node[j]).id && find(out.begin(), out.end(), j) == out.end()){
+            dist = Harvesine(node[i], node[j]);            
             if (dist < min) 
             {
                 min = dist;
@@ -220,7 +220,7 @@ int min_dist_to_node(vector<Instancia> inst, int i, vector<int> &out){
 //------------------------------------------------------------------//
 // --Fuente: https://github.com/fchacon20/GVRP_IA/blob/master/IaProject/solutionUtilities.cpp
 //------------------------------------------------------------------//
-bool sol_valida(vector<Instancia> sol, float *p){
+bool sol_valida(vector<Nodos> sol, float *p){
     
     //Parametros    
     /////////////////////////////////
@@ -278,7 +278,7 @@ bool sol_valida(vector<Instancia> sol, float *p){
 //------------------------------------------------------------------//
 //-- DEVUELVE: solucion final con el depot final donde corresponde -//
 //------------------------------------------------------------------//
-void revisionFinal(vector<Instancia> &sol)
+void revisionFinal(vector<Nodos> &sol)
 {
     for (int i = 1; i < sol.size(); i++)
     {            
@@ -303,7 +303,7 @@ void revisionFinal(vector<Instancia> &sol)
 //------------------------------------------------------------------//
 //-- DEVUELVE: el vector solucion restringido ----------------------//
 //------------------------------------------------------------------//
-void restringir(vector<Instancia> &sol, vector<Instancia> fuel, float *params){
+void GreedySearch(vector<Nodos> &sol, vector<Nodos> fuel, float *params){
 	
 	//Parametros	
 	////////////////////////////////
@@ -324,10 +324,10 @@ void restringir(vector<Instancia> &sol, vector<Instancia> fuel, float *params){
 	{															
 		min_dist = 32767;
 		for (int j = 0; j < fuel.size(); j++)
-		{			                
-			dist = Harvesine(sol[i], fuel[j]);
+		{			                			
 			if (dist < min_dist && i!=j)
 			{
+                dist = Harvesine(sol[i], fuel[j]);
 				min_dist = dist;
 				index = j;
 			}													
@@ -338,13 +338,13 @@ void restringir(vector<Instancia> &sol, vector<Instancia> fuel, float *params){
 
 	// Inicio del recorrido 
 	bool nodo_ok = false;
-	vector<Instancia> comp_dist;
-	comp_dist.push_back(sol[0]);	
+	vector<Nodos> aux_sol;
+	aux_sol.push_back(sol[0]);	
 
     vector<int> sol_index;
     sol_index.push_back(0);
 
-	int ultimo = comp_dist.size()-1;	
+	int ultimo = aux_sol.size()-1;	
 	float t = 0;    
 	double actualQ = 0;	
 	vector<string> ids;
@@ -366,16 +366,16 @@ void restringir(vector<Instancia> &sol, vector<Instancia> fuel, float *params){
 		for (int i = 1; i < sol.size(); i++)
 		{	
 			// Distancia entre nodo actual y ultimo visitado
-			dist_i = Harvesine(comp_dist[ultimo], sol[i]);
+			dist_i = Harvesine(aux_sol[ultimo], sol[i]);
 
 			// Distancia entre nodo actual y deposito
-			dist_d = Harvesine(sol[i], comp_dist[0]);	
+			dist_d = Harvesine(sol[i], aux_sol[0]);	
 
             // Tiempo de viaje
             t += dist_i/v + min(dist_d/v, (min_fuel_dist[i]).dist/v);
 
             // Revisar que el anterior no sea el mismo y que si es cliente no se repita
-			if ((comp_dist[ultimo]).id != (sol[i]).id && find(ids.begin(), ids.end(), (sol[i]).id) == ids.end() )
+			if ((aux_sol[ultimo]).id != (sol[i]).id && find(ids.begin(), ids.end(), (sol[i]).id) == ids.end() )
 			{					
 				// Si queda f para volver al depósito o si queda f para llegar a AFS o (si es AFS o d y el anterior no lo es)
 				if (dist_d*r + actualQ <= Q || (min_fuel_dist[i]).dist*r + actualQ <= Q || (sol[i]).type !="c" )
@@ -387,7 +387,7 @@ void restringir(vector<Instancia> &sol, vector<Instancia> fuel, float *params){
 						if(dist_i < nodo_cercano)
 						{	
                             // Si el nodo anterior no es cliente el actual debe serlo                                    
-							if (!((sol[i]).type != "c" && (comp_dist[ultimo]).type != "c"))
+							if (!((sol[i]).type != "c" && (aux_sol[ultimo]).type != "c"))
 							{		                                
                                 nodo_cercano = dist_i;
                                 nodo_ok = true;                              
@@ -414,16 +414,16 @@ void restringir(vector<Instancia> &sol, vector<Instancia> fuel, float *params){
 
                 
                 // Se agrega el nodo a la solucion
-                comp_dist.push_back(sol[idx]);                    
+                aux_sol.push_back(sol[idx]);                    
 
-                ultimo = comp_dist.size()-1;                          
+                ultimo = aux_sol.size()-1;                          
                                     
-                if ((comp_dist[ultimo]).type == "c")
+                if ((aux_sol[ultimo]).type == "c")
                 {                           
                     ids.push_back((sol[idx]).id);   
                     t += 30;
                 }
-                else if ((comp_dist[ultimo]).type == "f")
+                else if ((aux_sol[ultimo]).type == "f")
                 {
                     t += 15;
                     actualQ = 0;
@@ -435,10 +435,11 @@ void restringir(vector<Instancia> &sol, vector<Instancia> fuel, float *params){
                 }           
             }
             else
+            // Si nodo_ok es falso quiere decir que no queda tiempo
             {                         
-                if((comp_dist[ultimo]).type != "d")
+                if((aux_sol[ultimo]).type != "d")
                 {                
-                    comp_dist.push_back(sol[0]);                 
+                    aux_sol.push_back(sol[0]);                 
                     actualQ = 0;
                     t = 0;
                 }                              
@@ -447,7 +448,7 @@ void restringir(vector<Instancia> &sol, vector<Instancia> fuel, float *params){
 			                                      
         vuelta++;                
 	}	    
-	sol = comp_dist; 
+	sol = aux_sol; 
     sol.push_back(sol[0]);
 }
 
@@ -457,11 +458,11 @@ void restringir(vector<Instancia> &sol, vector<Instancia> fuel, float *params){
 //------------------------------------------------------------------//
 //-- FUNCION: Revisar si un par de soluciones son iguales ----------//
 //------------------------------------------------------------------//
-//-- RECIBE: 2 vectores de instancias ------------------------------//
+//-- RECIBE: 2 vectores de nodos -----------------------------------//
 //------------------------------------------------------------------//
-//-- DEVUELVE: la solucion inicial candidata en forma de instancias //
+//-- DEVUELVE: la solucion inicial candidata en forma de nodos -----//
 //------------------------------------------------------------------//
-bool misma_solucion( vector<Instancia>sol_A, vector <Instancia>sol_B)
+bool misma_solucion( vector<Nodos>sol_A, vector <Nodos>sol_B)
 {   
     // Revisar si alguno esta vacio
     if((sol_A.size() == 0 || sol_B.size()== 0) || (sol_A.size() != sol_B.size()))
@@ -485,11 +486,11 @@ bool misma_solucion( vector<Instancia>sol_A, vector <Instancia>sol_B)
 //------------------------------------------------------------------//
 //-- FUNCION: Obtener solución inicial -----------------------------//
 //------------------------------------------------------------------//
-//-- RECIBE: instancias, distancias, combustibles y parametros -----//
+//-- RECIBE: nodos, distancias, combustibles y parametros ----------//
 //------------------------------------------------------------------//
-//-- DEVUELVE: la solucion inicial candidata en forma de instancias //
+//-- DEVUELVE: la solucion inicial candidata en forma de nodos -----//
 //------------------------------------------------------------------//
-void solucionInicial(vector<Instancia> &inst, vector<Distancia> &distancia, vector<Instancia> &fuel, vector<Instancia> &sol, float *Parametros){
+void solucionInicial(vector<Nodos> &node, vector<Distancia> &distancia, vector<Nodos> &fuel, vector<Nodos> &sol, float *Parametros){
     double dist;
     int index;
 
@@ -497,34 +498,34 @@ void solucionInicial(vector<Instancia> &inst, vector<Distancia> &distancia, vect
     sol_index.push_back(0);
 
     // Primero el deposito
-    sol.push_back(inst[0]);
+    sol.push_back(node[0]);
 
-    for(int i=0; i < inst.size(); i++) 
+    for(int i=0; i < node.size(); i++) 
     { 
     	// Obtener nodos de combustible
-        if ((inst[i]).type == "f" || (inst[i]).type == "d") fuel.push_back(inst[i]);        
+        if ((node[i]).type == "f" || (node[i]).type == "d") fuel.push_back(node[i]);        
  		
  		// Calcular distancias
-        for(int j=i+1; j < inst.size(); j++) 
+        for(int j=i+1; j < node.size(); j++) 
         {
-            dist = Harvesine(inst[i], inst[j]);
-            distancia.push_back(Distancia{(inst[i]).id, (inst[j]).id, dist});
+            dist = Harvesine(node[i], node[j]);
+            distancia.push_back(Distancia{(node[i]).id, (node[j]).id, dist});
         }    
     }         
 
     // Agregar a la solucion inicial el swaped mas cercano
-    for (int i = 0; i < inst.size()-1; i++)
+    for (int i = 0; i < node.size()-1; i++)
     {        
-        index = min_dist_to_node(inst, i, sol_index);        
-        sol.push_back(inst[index]);
+        index = min_dist_to_node(node, i, sol_index);        
+        sol.push_back(node[index]);
     }          
     
 
-    //limpiar el vector instancia, distancia y sol_index, ya no es necesario
-    inst.clear();    
+    //limpiar el vector de nodos, distancia y sol_index, ya no es necesario
+    node.clear();    
     distancia.clear();
     sol_index.clear();
-    restringir(sol, fuel, Parametros);    
+    GreedySearch(sol, fuel, Parametros);    
 }
 
 
@@ -537,7 +538,7 @@ void solucionInicial(vector<Instancia> &inst, vector<Distancia> &distancia, vect
 //------------------------------------------------------------------//
 //-- DEVUELVE: la distancia total del recorrido --------------------//
 //------------------------------------------------------------------//
-double distanciaRecorrida(vector<Instancia> sol)
+double distanciaRecorrida(vector<Nodos> sol)
 {    
     double dist_recor = 0;
     for (int i = 0; i < sol.size()-1; ++i)
@@ -548,9 +549,9 @@ double distanciaRecorrida(vector<Instancia> sol)
 }
 
 
-vector<Instancia> manual_swap(vector<Instancia> sol, int i, int j)
+vector<Nodos> manual_swap(vector<Nodos> sol, int i, int j)
 {
-    vector<Instancia> aux;
+    vector<Nodos> aux;
     for (int k = 0; k < sol.size(); k++)
     {
         if (k == i)
@@ -580,7 +581,7 @@ vector<Instancia> manual_swap(vector<Instancia> sol, int i, int j)
 //------------------------------------------------------------------//
 //-- DEVUELVE: la mejor solucion con TabuSearch --------------------//
 //------------------------------------------------------------------//
-vector <Instancia> TabuSearch(vector <Instancia> sol, int iter, float *p, int tamanio_lista)
+vector <Nodos> TabuSearch(vector <Nodos> sol, int iter, float *p, int tamanio_lista)
 {    
     // PARAMETROS    
     ////////////////////////////////////////////////
@@ -593,14 +594,14 @@ vector <Instancia> TabuSearch(vector <Instancia> sol, int iter, float *p, int ta
 
     // LISTA TABU que contiene los tamanio_lista ultimos movimientos
     ////////////////////////////////////////////////    
-    vector<vector <Instancia>> Tabu;              //
+    vector<vector <Nodos>> Tabu;              //
     ////////////////////////////////////////////////
 
 
     // VARIABLES ACTUALES
     ////////////////////////////////////////////////
     // Solucion que se convierte en los swap tour //
-    vector <Instancia> current_sol;               //
+    vector <Nodos> current_sol;               //
     // Distancia del tour swaped                  //
     double current_dist_swap;                     //
     // Distancia de la solucion actual            //
@@ -611,13 +612,13 @@ vector <Instancia> TabuSearch(vector <Instancia> sol, int iter, float *p, int ta
     // VARIABLES DE MEJORA
     //////////////////////////////////////////////// 
     // Mejor solucion hasta el momento            //
-    vector <Instancia> best_sol;                  //
+    vector <Nodos> best_sol;                  //
     // Distancia para auxiliar para comparar      //
     double comp_dist = 32767;                     //
     // Distancia mas corta hasta el momento       //
     double best_dist = distanciaRecorrida(sol);   //
     // Peor solucion encontrada entre las mejores //
-    vector <Instancia> worst_sol;                 //    
+    vector <Nodos> worst_sol;                 //    
     // Mejor iteracion hasta el momento           //
     int best_iter;                                //
     ////////////////////////////////////////////////
@@ -639,7 +640,7 @@ vector <Instancia> TabuSearch(vector <Instancia> sol, int iter, float *p, int ta
                 // Flag de control de flujo
                 flag = true;
                 // Solucion con swap
-                vector<Instancia> swaped;
+                vector<Nodos> swaped;
 
                 if(i!=j)
                 {
@@ -771,13 +772,13 @@ int main(int argc, char **argv)
 {
     //--------------------------------------------------------------//
     //---------------- LEER ARCHIVO DE INSTANCIAS ------------------//
-    //----- Lee linea por linea y las guarda como instancias -------//
-    //----- en un vector de instancias. ----------------------------//
+    //----- Lee linea por linea y las guarda como nodos ------------//
+    //----- en un vector de nodos. ---------------------------------//
     //----- Los parametros son guardados en el vector parametros ---//
     //--------------------------------------------------------------//
-    vector<Instancia> inst;    
+    vector<Nodos> node;    
     float params[5];    
-    Read(argc, argv, inst, params);   
+    Read(argc, argv, node, params);   
 
     //Parametros    
     ////////////////////////////////
@@ -799,10 +800,10 @@ int main(int argc, char **argv)
     //----- Calcular una solucion inicial greedy luego -------------//
     //----- revisar si es factible ---------------------------------//
     //--------------------------------------------------------------//    
-    vector<Instancia> fuel;    
-    vector<Instancia> sol;
+    vector<Nodos> fuel;    
+    vector<Nodos> sol;
     vector<Distancia> distancias;        
-    solucionInicial(inst, distancias, fuel, sol, params);    
+    solucionInicial(node, distancias, fuel, sol, params);    
             
 
 
@@ -815,7 +816,7 @@ int main(int argc, char **argv)
     //--------------------------------------------------------------//
     int tamanio_lista_tabu = max(n_iter/4, 10);           
         
-    vector <Instancia> TS = TabuSearch(sol, n_iter, params, tamanio_lista_tabu);       
+    vector <Nodos> TS = TabuSearch(sol, n_iter, params, tamanio_lista_tabu);       
     revisionFinal(TS);
     cout << "\n" << "Con un recorrido de largo: " << distanciaRecorrida(TS) << endl;   
 
