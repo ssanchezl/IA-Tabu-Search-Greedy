@@ -1,5 +1,5 @@
 # IA-Tabu-Search-Greedy
-## Tabu Search model for GVRP
+## Solucion del Green-VRP usando Tabu Search y un algoritmo greedy para la solución inicial
 
 ### Instrucciones de compilación
 Para compilar el código se debe ejecutar el siguiente comando en una terminal de linux:
